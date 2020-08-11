@@ -1800,11 +1800,16 @@ class Array(object):
     def _chunk_key(self, chunk_coords):
         return self._key_prefix + '.'.join(map(str, chunk_coords))
 
-    def _decode_chunk(self, cdata):
+    def _decode_chunk(self, cdata, start=None, nitems=None):    
 
         # decompress
         if self._compressor:
-            chunk = self._compressor.decode(cdata)
+            # only decode requested items
+            if (all([x is not None for x in [start, nitems]])
+                and self._compressor.codec_id == 'blosc'):
+                chunk = self._compressor.decode_partial(cdata, start, nitems)
+            else:
+                chunk = self._compressor.decode(cdata)
         else:
             chunk = cdata
 
