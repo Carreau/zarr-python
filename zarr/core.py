@@ -11,9 +11,14 @@ from numcodecs.compat import ensure_bytes, ensure_ndarray
 
 from zarr.attrs import Attributes
 from zarr.codecs import AsType, get_codec
+<<<<<<< HEAD
 from zarr.errors import ArrayNotFoundError, ReadOnlyError
+=======
+from zarr.errors import ArrayIndexError, err_array_not_found, err_read_only
+>>>>>>> 2333fd0c... partial chunk read working
 from zarr.indexing import (BasicIndexer, CoordinateIndexer, MaskIndexer,
-                           OIndex, OrthogonalIndexer, VIndex, check_fields,
+                           OIndex, OrthogonalIndexer, VIndex, PartialChunkIterator,
+                           check_fields,
                            check_no_multi_fields, ensure_tuple,
                            err_too_many_indices, is_contiguous_selection,
                            is_scalar, pop_fields)
@@ -1800,7 +1805,7 @@ class Array(object):
     def _chunk_key(self, chunk_coords):
         return self._key_prefix + '.'.join(map(str, chunk_coords))
 
-    def _decode_chunk(self, cdata, start=None, nitems=None):    
+    def _decode_chunk(self, cdata, start=None, nitems=None, expected_shape=None):    
 
         # decompress
         if self._compressor:
@@ -1834,7 +1839,7 @@ class Array(object):
 
         # ensure correct chunk shape
         chunk = chunk.reshape(-1, order='A')
-        chunk = chunk.reshape(self._chunks, order=self._order)
+        chunk = chunk.reshape(expected_shape or self._chunks, order=self._order)
 
         return chunk
 
