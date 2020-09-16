@@ -79,7 +79,7 @@ def _path_to_prefix(path: Optional[str]) -> str:
     return prefix
 
 
-def contains_array(store: MutableMapping, path: Path = None) -> bool:
+def contains_array(store: MutableMapping, path: Union[str, bytes]) -> bool:
     """Return True if the store contains an array at the given logical path."""
     path = normalize_storage_path(path)
     prefix = _path_to_prefix(path)
@@ -351,14 +351,14 @@ def _init_array_metadata(
     dtype=None,
     compressor="default",
     fill_value=None,
-    order="C",
-    overwrite=False,
-    path: Optional[str] = None,
-    chunk_store=None,
-    filters=None,
-    object_codec=None,
+    order: str,
+    overwrite:bool,
+    path: str,
+    chunk_store,
+    filters,
+    object_codec
 ):
-
+    assert path is not None
     # guard conditions
     if overwrite:
         # attempt to delete any pre-existing items in store
@@ -472,10 +472,10 @@ def init_group(
 def _init_group_metadata(
     store: MutableMapping,
     overwrite: Optional[bool] = False,
-    path: Optional[str] = None,
+    path: str = None,
     chunk_store: MutableMapping = None,
 ):
-
+    assert path is not None
     # guard conditions
     if overwrite:
         # attempt to delete any pre-existing items in store
