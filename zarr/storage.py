@@ -79,7 +79,7 @@ def _path_to_prefix(path: Optional[str]) -> str:
     return prefix
 
 
-def contains_array(store: MutableMapping, path: Union[str, bytes]) -> bool:
+def contains_array(store: MutableMapping, path: Path) -> bool:
     """Return True if the store contains an array at the given logical path."""
     path = normalize_storage_path(path)
     prefix = _path_to_prefix(path)
@@ -140,7 +140,7 @@ def rename(store, src_path: Path, dst_path: Path):
         _rename_from_keys(store, src_path, dst_path)
 
 
-def _listdir_from_keys(store: MutableMapping, path: Optional[str] = None) -> List[str]:
+def _listdir_from_keys(store: MutableMapping, path: str) -> List[str]:
     # assume path already normalized
     prefix = _path_to_prefix(path)
     children = set()
