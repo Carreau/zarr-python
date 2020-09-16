@@ -32,7 +32,7 @@ from collections.abc import MutableMapping
 from os import scandir, replace
 from pickle import PicklingError
 from threading import Lock, RLock
-from typing import Optional, Union, List, Tuple, Dict
+from typing import Optional, Union, List, Tuple, Dict, Sequence
 import uuid
 import time
 
@@ -70,7 +70,7 @@ except ImportError:  # pragma: no cover
 Path = Union[str, bytes, None]
 
 
-def _path_to_prefix(path: Optional[str]) -> str:
+def _path_to_prefix(path: str) -> str:
     # assume path already normalized
     if path:
         prefix = path + '/'
@@ -197,7 +197,7 @@ def getsize(store, path: Path = None) -> int:
 
 
 def _require_parent_group(
-    path: Optional[str],
+    path: str,
     store: MutableMapping,
     chunk_store: Optional[MutableMapping],
     overwrite: bool,
@@ -471,9 +471,10 @@ def init_group(
 
 def _init_group_metadata(
     store: MutableMapping,
-    overwrite: Optional[bool] = False,
-    path: str = None,
-    chunk_store: MutableMapping = None,
+    *,
+    path: str,
+    chunk_store: Optional[MutableMapping],
+    overwrite: bool = False,
 ):
     assert path is not None
     # guard conditions
@@ -495,7 +496,7 @@ def _init_group_metadata(
     store[key] = encode_group_metadata(meta)
 
 
-def _dict_store_keys(d: Dict, prefix="", cls=dict):
+def _dict_store_keys(d: Dict, prefix: str = "", cls=dict):
     for k in d.keys():
         v = d[k]
         if isinstance(v, cls):
@@ -557,7 +558,7 @@ class MemoryStore(MutableMapping):
                 raise KeyError(item)
         return parent, segments[-1]
 
-    def _require_parent(self, item):
+    def _require_parent(self, item: str):
         parent = self.root
         # split the item
         segments = item.split('/')
@@ -615,11 +616,11 @@ class MemoryStore(MutableMapping):
             self.cls == other.cls
         )
 
-    def keys(self):
+    def keys(self) -> Sequence[str]:  # type: ignore
         for k in _dict_store_keys(self.root, cls=self.cls):
             yield k
 
-    def __iter__(self):
+    def __iter__(self) -> Sequence[str]:  # type: ignore
         return self.keys()
 
     def __len__(self) -> int:
@@ -640,7 +641,7 @@ class MemoryStore(MutableMapping):
         else:
             return []
 
-    def rename(self, src_path: Path, dst_path: Path):
+    def rename(self, src_path: Path, dst_path: Path) -> None:
         src_path = normalize_storage_path(src_path)
         dst_path = normalize_storage_path(dst_path)
 
@@ -649,7 +650,7 @@ class MemoryStore(MutableMapping):
 
         dst_parent[dst_key] = src_parent.pop(src_key)
 
-    def rmdir(self, path: Path = None):
+    def rmdir(self, path: Path = None) -> None:
         path = normalize_storage_path(path)
         if path:
             try:
@@ -664,7 +665,7 @@ class MemoryStore(MutableMapping):
             # clear out root
             self.root = self.cls()
 
-    def getsize(self, path: Path = None):
+    def getsize(self, path: Path = None) -> int:
         path = normalize_storage_path(path)
 
         # obtain value to return size of
@@ -693,7 +694,7 @@ class MemoryStore(MutableMapping):
         else:
             return buffer_size(value)
 
-    def clear(self):
+    def clear(self) -> None:
         with self.write_mutex:
             self.root.clear()
 
@@ -766,7 +767,7 @@ class DirectoryStore(MutableMapping):
 
     """
 
-    def __init__(self, path, normalize_keys=False):
+    def __init__(self, path: str, normalize_keys: bool = False):
 
         # guard conditions
         path = os.path.abspath(path)
@@ -776,7 +777,7 @@ class DirectoryStore(MutableMapping):
         self.path = path
         self.normalize_keys = normalize_keys
 
-    def _normalize_key(self, key):
+    def _normalize_key(self, key: str) -> str:
         return key.lower() if self.normalize_keys else key
 
     def _fromfile(self, fn):
@@ -902,21 +903,21 @@ class DirectoryStore(MutableMapping):
     def __len__(self):
         return sum(1 for _ in self.keys())
 
-    def dir_path(self, path=None):
+    def dir_path(self, path: Path = None):
         store_path = normalize_storage_path(path)
         dir_path = self.path
         if store_path:
             dir_path = os.path.join(dir_path, store_path)
         return dir_path
 
-    def listdir(self, path=None):
+    def listdir(self, path: Path = None):
         dir_path = self.dir_path(path)
         if os.path.isdir(dir_path):
             return sorted(os.listdir(dir_path))
         else:
             return []
 
-    def rename(self, src_path, dst_path):
+    def rename(self, src_path: Path, dst_path: Path):
         store_src_path = normalize_storage_path(src_path)
         store_dst_path = normalize_storage_path(dst_path)
 
@@ -927,7 +928,7 @@ class DirectoryStore(MutableMapping):
 
         os.renames(src_path, dst_path)
 
-    def rmdir(self, path=None):
+    def rmdir(self, path: Path = None):
         store_path = normalize_storage_path(path)
         dir_path = self.path
         if store_path:
@@ -935,7 +936,7 @@ class DirectoryStore(MutableMapping):
         if os.path.isdir(dir_path):
             shutil.rmtree(dir_path)
 
-    def getsize(self, path=None):
+    def getsize(self, path: Path = None):
         store_path = normalize_storage_path(path)
         fs_path = self.path
         if store_path:
