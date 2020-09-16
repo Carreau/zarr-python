@@ -95,7 +95,7 @@ def contains_group(store: MutableMapping, path: Path = None) -> bool:
     return key in store
 
 
-def _rmdir_from_keys(store: MutableMapping, path: Optional[str] = None) -> None:
+def _rmdir_from_keys(store: MutableMapping, path: str) -> None:
     # assume path already normalized
     prefix = _path_to_prefix(path)
     for key in list(store.keys()):
