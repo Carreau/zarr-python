@@ -11,11 +11,7 @@ from numcodecs.compat import ensure_bytes, ensure_ndarray
 
 from zarr.attrs import Attributes
 from zarr.codecs import AsType, get_codec
-<<<<<<< HEAD
-from zarr.errors import ArrayNotFoundError, ReadOnlyError
-=======
-from zarr.errors import ArrayIndexError, err_array_not_found, err_read_only
->>>>>>> 2333fd0c... partial chunk read working
+from zarr.errors import ArrayNotFoundError, ReadOnlyError, ArrayIndexError
 from zarr.indexing import (BasicIndexer, CoordinateIndexer, MaskIndexer,
                            OIndex, OrthogonalIndexer, VIndex, PartialChunkIterator,
                            check_fields,
@@ -1604,12 +1600,12 @@ class Array(object):
                 )
             )
 
+            assert write_direct
             if write_direct:
 
                 # optimization: we want the whole chunk, and the destination is
                 # contiguous, so we can decompress directly from the chunk
                 # into the destination array
-
                 if self._compressor:
                     self._compressor.decode(cdata, dest)
                 else:
@@ -1618,8 +1614,31 @@ class Array(object):
                     np.copyto(dest, chunk)
                 return
 
+<<<<<<< HEAD
         # decode chunk
         chunk = self._decode_chunk(cdata)
+=======
+            # decode chunk
+            # try:
+            #     if self._compressor and self._compressor.codec_id == 'blosc' \
+            #        and not fields and self.dtype != object:
+            #         tmp = np.empty(self._chunks, dtype=self.dtype)
+            #         index_selection = PartialChunkIterator(chunk_selection, self.chunks)
+            #         for start, nitems, partial_out_selection in index_selection:
+            #             expected_shape = [
+            #                 len(range(*partial_out_selection[i].indices(self.chunks[0]+1)))
+            #                 if i < len(partial_out_selection) else dim
+            #                 for i, dim in enumerate(self.chunks)]
+            #             chunk_partial = self._decode_chunk(
+            #                 cdata, start=start, nitems=nitems,
+            #                 expected_shape=expected_shape)
+            #             tmp[partial_out_selection] = chunk_partial
+            #         out[out_selection] = tmp[chunk_selection]
+            #         return
+            # except ArrayIndexError:
+            #     pass
+            chunk = self._decode_chunk(cdata)
+>>>>>>> 5c508d7c... figuring out tests
 
         # select data from chunk
         if fields:
