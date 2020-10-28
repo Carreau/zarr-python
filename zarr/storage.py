@@ -1128,6 +1128,13 @@ class FSStore(MutableMapping):
             raise ReadOnlyError()
         self.map.clear()
 
+    def chunk_size(self, key):
+        return self.map.fs.size(key)
+
+    def read_block(self, key, offset, length, delimiter=None):
+        return self.map.fs.read_block(key, offset, length, delimeter=None)
+        
+
 
 class TempStore(DirectoryStore):
     """Directory store using a temporary directory for storage.

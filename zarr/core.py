@@ -19,7 +19,7 @@ from zarr.indexing import (BasicIndexer, CoordinateIndexer, MaskIndexer,
                            err_too_many_indices, is_contiguous_selection,
                            is_scalar, pop_fields)
 from zarr.meta import decode_array_metadata, encode_array_metadata
-from zarr.storage import array_meta_key, attrs_key, getsize, listdir
+from zarr.storage import array_meta_key, attrs_key, getsize, listdir, FSStore
 from zarr.util import (InfoReporter, check_array_shape, human_readable_size,
                        is_total_slice, nolock, normalize_chunks,
                        normalize_resize_args, normalize_shape,
@@ -1113,7 +1113,7 @@ class Array(object):
 
         See Also
         --------
-        get_basic_selection, set_basic_selection, get_mask_selection, set_mask_selection,
+        basic_selection, set_basic_selection, get_mask_selection, set_mask_selection,
         get_coordinate_selection, set_coordinate_selection, get_orthogonal_selection,
         set_orthogonal_selection, vindex, oindex, __getitem__
 
@@ -1582,7 +1582,8 @@ class Array(object):
                                  fields=fields)
 
     def _process_chunk(self, out, cdata, chunk_selection, drop_axes,
-                       out_is_ndarray, fields, out_selection):
+                       out_is_ndarray, fields, out_selection,
+                       partial_read_decode=False):
         """Take binary data from storage and fill output array"""
         if (out_is_ndarray and
                 not fields and
@@ -1606,6 +1607,8 @@ class Array(object):
                 # contiguous, so we can decompress directly from the chunk
                 # into the destination array
                 if self._compressor:
+                    if isinstance(cdata, PartialReadBuffer):
+                        cdata = cdata.read_full()
                     self._compressor.decode(cdata, dest)
                 else:
                     chunk = ensure_ndarray(cdata).view(self._dtype)
@@ -1615,8 +1618,8 @@ class Array(object):
 
         # decode chunk
         try:
-            if self._compressor and self._compressor.codec_id == 'blosc' \
-               and not fields and self.dtype != object:
+            if partial_read_decode:
+                cdata.prepare_chunk()
                 tmp = np.empty(self._chunks, dtype=self.dtype)
                 index_selection = PartialChunkIterator(chunk_selection, self.chunks)
                 for start, nitems, partial_out_selection in index_selection:
@@ -1624,8 +1627,9 @@ class Array(object):
                         len(range(*partial_out_selection[i].indices(self.chunks[0]+1)))
                         if i < len(partial_out_selection) else dim
                         for i, dim in enumerate(self.chunks)]
+                    cdata.read_part(start, nitems)
                     chunk_partial = self._decode_chunk(
-                        cdata, start=start, nitems=nitems,
+                        cdata.buff, start=start, nitems=nitems,
                         expected_shape=expected_shape)
                     tmp[partial_out_selection] = chunk_partial
                 out[out_selection] = tmp[chunk_selection]
@@ -1704,11 +1708,21 @@ class Array(object):
             out_is_ndarray = False
 
         ckeys = [self._chunk_key(ch) for ch in lchunk_coords]
-        cdatas = self.chunk_store.getitems(ckeys, on_error="omit")
+
+        if self._compressor and self._compressor.codec_id == 'blosc' \
+               and not fields and self.dtype != object and isinstance(self.chunk_store, FSStore):
+            partial_read_decode = True
+            cdatas = {ckey: PartialReadBuffer(ckey, self.chunk_store)
+                      for ckey in ckeys if ckey in self.chunk_store}
+                
+        else:
+            partial_read_decode = False
+            cdatas = self.chunk_store.getitems(ckeys, on_error="omit")
         for ckey, chunk_select, out_select in zip(ckeys, lchunk_selection, lout_selection):
             if ckey in cdatas:
                 self._process_chunk(out, cdatas[ckey], chunk_select, drop_axes,
-                                    out_is_ndarray, fields, out_select)
+                                    out_is_ndarray, fields, out_select,
+                                    partial_read_decode=partial_read_decode)
             else:
                 # check exception type
                 if self._fill_value is not None:
@@ -2393,3 +2407,48 @@ class Array(object):
         filters.insert(0, AsType(encode_dtype=self._dtype, decode_dtype=dtype))
 
         return self.view(filters=filters, dtype=dtype, read_only=True)
+
+
+class PartialReadBuffer:
+
+    from numcodecs.blosc import cbuffer_sizes, cbuffer_metainfo
+
+    def __init__(self, store_key, chunk_store):
+        self.chunk_store = chunk_store
+        self.store_key = store_key
+
+    def prepare_chunk(self):
+        self.header = self.chunk_store.read_block(self.store_key, 0, 16)
+        nbytes, cbytes, blocksize = cbuffer_sizes(self.header)
+        typesize, shuffle, mmcpyed = cbuffer_metainfo(self.header)
+        
+        self.buff = mmap.mmap(-1, chunk_size)
+        self.buff[0, 16] = self.header
+        
+        n_blocks = nbytes / blocksize
+        n_blocks = nblocks if nblocks == int(nblocks) else int(nblocks + 1)
+        start_points_buffer = self.chunk_store.read_block(16, (nblocks*4))
+        self.start_points = np.frombuffer(start_points_buffer,
+                                          count=nblocks,
+                                          dtype=np.int32)
+        self.buff[16, (16 + (nblocks*4))] = start_points_buffer
+        self.n_per_block = blocksize / typesize
+
+    def read_part(self, start, nitems):
+        blocks_to_decompress = nitems / self.n_per_block
+        blocks_to_decompress = (blocks_to_decompress
+                                if blocks_to_decompress == int(blocks_to_decompress)
+                                else int(blocks_to_decompress+1))
+        start_block = int(start / self.n_per_block)
+        stop_block = decompress_start_block + blocks_to_decompress
+        for x in range(start_block, stop_block+1):
+            start_byte = self.start_points[x]
+            stop_byte = self.start_points[self.start_points > start_byte].min()
+            length = stop_byte - start_byte
+            data_buff = self.chunk_store.read_block(self.store_key,
+                                                    start_byte,
+                                                    length)
+            self.buff[start_byte:stop_byte] = data_buff
+
+    def read_full(self):
+        return self.chunk_store[self.store_key]
