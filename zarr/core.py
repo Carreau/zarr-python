@@ -1637,13 +1637,15 @@ class Array(object):
         except ArrayIndexError:
             pass
         chunk = self._decode_chunk(cdata)
+
+        # select data from chunk
         if fields:
             chunk = chunk[fields]
         tmp = chunk[chunk_selection]
         if drop_axes:
             tmp = np.squeeze(tmp, axis=drop_axes)
 
-            # store selected data in output
+        # store selected data in output
         out[out_selection] = tmp
 
     def _chunk_getitem(self, chunk_coords, chunk_selection, out, out_selection,
