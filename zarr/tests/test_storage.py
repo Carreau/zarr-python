@@ -954,6 +954,7 @@ class TestFSStore(StoreTests, unittest.TestCase):
                             storage_options=self.s3so)
 
         assert g.data[:].tolist() == [0, 1, 2, 3, 0, 0, 0, 0]
+        assert g.data[:4].tolist() == [0, 1, 2, 3]
 
         # test via convenience
         g = zarr.open("s3://test/out.zarr", mode='r',
