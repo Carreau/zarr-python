@@ -1020,9 +1020,8 @@ class Array(object):
         else:
             check_array_shape('out', out, out_shape)
 
-        # iterate over chunks
-        if not hasattr(self.chunk_store, "getitems") or \
-           any(map(lambda x: x == 0, self.shape)):
+        # iterate over chunks, not self.size becuase then indexer none and cant be zipped, will raise error
+        if not hasattr(self.chunk_store, "getitems") or not self.size:
             # sequentially get one key at a time from storage
             for chunk_coords, chunk_selection, out_selection in indexer:
 
@@ -1635,7 +1634,7 @@ class Array(object):
                 out[out_selection] = tmp[chunk_selection]
                 return
         except ArrayIndexError:
-            pass
+            cdata = cdata.read_full()
         chunk = self._decode_chunk(cdata)
 
         # select data from chunk
@@ -2411,38 +2410,52 @@ class Array(object):
         return self.view(filters=filters, dtype=dtype, read_only=True)
 
 
-class PartialReadBuffer:
+from numcodecs.blosc import cbuffer_sizes, cbuffer_metainfo
+import mmap
 
-    from numcodecs.blosc import cbuffer_sizes, cbuffer_metainfo
+class PartialReadBuffer:
 
     def __init__(self, store_key, chunk_store):
         self.chunk_store = chunk_store
         self.store_key = store_key
+        self.buff = None
+        self.nblocks = None
+        self.start_points = None
+        self.n_per_block = None
 
     def prepare_chunk(self):
-        self.header = self.chunk_store.read_block(self.store_key, 0, 16)
-        nbytes, cbytes, blocksize = cbuffer_sizes(self.header)
-        typesize, shuffle, mmcpyed = cbuffer_metainfo(self.header)
+        if self.buff:
+            return
+        header = self.chunk_store.read_block(self.store_key, 0, 16)
+        nbytes, cbytes, blocksize = cbuffer_sizes(header)
+        typesize, _shuffle, _memcpyd = cbuffer_metainfo(header)
         
-        self.buff = mmap.mmap(-1, chunk_size)
-        self.buff[0, 16] = self.header
+        self.buff = mmap.mmap(-1, cbytes)
+        self.buff[0:16] = header
         
-        n_blocks = nbytes / blocksize
-        n_blocks = nblocks if nblocks == int(nblocks) else int(nblocks + 1)
-        start_points_buffer = self.chunk_store.read_block(16, (nblocks*4))
+        self.nblocks = nbytes / blocksize
+        self.nblocks = int(self.nblocks) if self.nblocks == int(self.nblocks) else int(self.nblocks + 1)
+        if self.nblocks == 1:
+            self.buff = self.read_full()
+            return
+        start_points_buffer = self.chunk_store.read_block(self.store_key, 16, int(self.nblocks*4))
         self.start_points = np.frombuffer(start_points_buffer,
-                                          count=nblocks,
+                                          count=self.nblocks,
                                           dtype=np.int32)
-        self.buff[16, (16 + (nblocks*4))] = start_points_buffer
+        self.buff[16: (16 + (self.nblocks*4))] = start_points_buffer
         self.n_per_block = blocksize / typesize
 
     def read_part(self, start, nitems):
+        if not self.buff:
+            self.prepare_chunk()
+        if self.nblocks == 1:
+            return
         blocks_to_decompress = nitems / self.n_per_block
         blocks_to_decompress = (blocks_to_decompress
                                 if blocks_to_decompress == int(blocks_to_decompress)
                                 else int(blocks_to_decompress+1))
         start_block = int(start / self.n_per_block)
-        stop_block = decompress_start_block + blocks_to_decompress
+        stop_block = start_block + blocks_to_decompress
         for x in range(start_block, stop_block+1):
             start_byte = self.start_points[x]
             stop_byte = self.start_points[self.start_points > start_byte].min()

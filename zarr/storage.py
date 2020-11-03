@@ -1129,10 +1129,12 @@ class FSStore(MutableMapping):
         self.map.clear()
 
     def chunk_size(self, key):
-        return self.map.fs.size(key)
+        key = self.dir_path(key)
+        return self.fs.size(key)
 
     def read_block(self, key, offset, length, delimiter=None):
-        return self.map.fs.read_block(key, offset, length, delimeter=None)
+        key = self.dir_path(key)
+        return self.fs.read_block(key, offset, length, delimiter=None)
         
 
 
