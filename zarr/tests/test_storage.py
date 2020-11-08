@@ -984,7 +984,10 @@ class TestFSStore(StoreTests, unittest.TestCase):
 
         assert (g2.data[:] == expected).all()
 
+        print(a.chunk_store.map.keys())
+        print('setting a')
         a[:] = 5  # write with scalar
+        print(a[:])
         assert (a[:] == 5).all()
 
         assert g2.data_f['foo'].tolist() == [b"aaa"] * 4 + [b"b"] * 4

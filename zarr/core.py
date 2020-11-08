@@ -1577,6 +1577,8 @@ class Array(object):
                         cv = chunk_value[item]
                     chunk_values.append(cv)
 
+            print('_chunk_setitems')
+
             self._chunk_setitems(lchunk_coords, lchunk_selection, chunk_values,
                                  fields=fields)
 
@@ -1737,6 +1739,7 @@ class Array(object):
         ckeys = [self._chunk_key(co) for co in lchunk_coords]
         cdatas = [self._process_for_setitem(key, sel, val, fields=fields)
                   for key, sel, val in zip(ckeys, lchunk_selection, values)]
+        print(ckeys)
         self.chunk_store.setitems({k: v for k, v in zip(ckeys, cdatas)})
 
     def _chunk_setitem(self, chunk_coords, chunk_selection, value, fields=None):
