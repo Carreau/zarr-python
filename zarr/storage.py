@@ -1056,14 +1056,14 @@ class FSStore(MutableMapping):
             raise KeyError(key) from e
 
     def setitems(self, values):
-        print('')
         if self.mode == 'r':
             raise ReadOnlyError()
         values = {self._normalize_key(key): val for key, val in values.items()}
-        print(values.keys())
+        print('FSSTore.setitems values.keys()', values.keys())
         self.map.setitems(values)
 
     def __setitem__(self, key, value):
+        print('__setitem__')
         if self.mode == 'r':
             raise ReadOnlyError()
         key = self._normalize_key(key)
