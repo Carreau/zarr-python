@@ -1044,12 +1044,10 @@ class FSStore(MutableMapping):
 
     def getitems(self, keys, **kwargs):
         keys = [self._normalize_key(key) for key in keys]
-        print('get keys', keys)
         return self.map.getitems(keys, on_error="omit")
 
     def __getitem__(self, key):
         key = self._normalize_key(key)
-        print('getitem', key)
         try:
             return self.map[key]
         except self.exceptions as e:
@@ -1059,15 +1057,12 @@ class FSStore(MutableMapping):
         if self.mode == 'r':
             raise ReadOnlyError()
         values = {self._normalize_key(key): val for key, val in values.items()}
-        print('FSSTore.setitems values.keys()', values.keys())
         self.map.setitems(values)
 
     def __setitem__(self, key, value):
-        print('__setitem__')
         if self.mode == 'r':
             raise ReadOnlyError()
         key = self._normalize_key(key)
-        print('setitem', key)
         path = self.dir_path(key)
         try:
             if self.fs.isdir(path):
