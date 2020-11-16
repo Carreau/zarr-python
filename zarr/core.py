@@ -104,7 +104,8 @@ class Array(object):
     """
 
     def __init__(self, store, path=None, read_only=False, chunk_store=None,
-                 synchronizer=None, cache_metadata=True, cache_attrs=True):
+                 synchronizer=None, cache_metadata=True, cache_attrs=True,
+                 partial_read=True):
         # N.B., expect at this point store is fully initialized with all
         # configuration metadata fully specified and normalized
 
