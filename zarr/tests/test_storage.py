@@ -983,7 +983,7 @@ class TestFSStore(StoreTests, unittest.TestCase):
                              storage_options=self.s3so)
 
         assert (g2.data[:] == expected).all()
-
+        a.chunk_store.fs.invalidate_cache('test/out.zarr/data')
         a[:] = 5
         assert (a[:] == 5).all()
 
@@ -1035,10 +1035,9 @@ def s3(request):
             pass
         timeout -= 0.1  # pragma: no cover
         time.sleep(0.1)  # pragma: no cover
-    s3so = dict(client_kwargs={'endpoint_url': endpoint_uri},
-                use_listings_cache=False)
-    s3 = s3fs.S3FileSystem(anon=False, **s3so)
-    s3.mkdir("test")
+    s3so = dict(client_kwargs={'endpoint_url': endpoint_uri})
+    s3_fs = s3fs.S3FileSystem(anon=False, **s3so)
+    s3_fs.mkdir("test")
     request.cls.s3so = s3so
     yield
     proc.terminate()
