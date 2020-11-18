@@ -52,6 +52,10 @@ class Array(object):
         If True (default), user attributes will be cached for attribute read
         operations. If False, user attributes are reloaded from the store prior
         to all attribute read operations.
+    partial_decompress : bool, optional
+        If True and while the chunk_store is a FSStore and the compreesion used 
+        is Blosc, when getting data from the array chunks will be partially
+        read and decompressed when possible.
 
     Attributes
     ----------
@@ -105,7 +109,7 @@ class Array(object):
 
     def __init__(self, store, path=None, read_only=False, chunk_store=None,
                  synchronizer=None, cache_metadata=True, cache_attrs=True,
-                 partial_read=True):
+                 partial_decompress=True):
         # N.B., expect at this point store is fully initialized with all
         # configuration metadata fully specified and normalized
 
@@ -120,6 +124,7 @@ class Array(object):
         self._synchronizer = synchronizer
         self._cache_metadata = cache_metadata
         self._is_view = False
+        self._partial_decompress = partial_decompress
 
         # initialize metadata
         self._load_metadata()
@@ -1711,8 +1716,9 @@ class Array(object):
 
         ckeys = [self._chunk_key(ch) for ch in lchunk_coords]
 
-        if self._compressor and self._compressor.codec_id == 'blosc' \
-               and not fields and self.dtype != object and isinstance(self.chunk_store, FSStore):
+        if self._partial_decompress and self._compressor \
+           and self._compressor.codec_id == 'blosc' and not fields \
+           and self.dtype != object and isinstance(self.chunk_store, FSStore):
             partial_read_decode = True
             cdatas = {ckey: PartialReadBuffer(ckey, self.chunk_store)
                       for ckey in ckeys if ckey in self.chunk_store}
