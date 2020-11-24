@@ -23,7 +23,7 @@ from zarr.storage import array_meta_key, attrs_key, getsize, listdir, FSStore
 from zarr.util import (InfoReporter, check_array_shape, human_readable_size,
                        is_total_slice, nolock, normalize_chunks,
                        normalize_resize_args, normalize_shape,
-                       normalize_storage_path)
+                       normalize_storage_path, PartialReadBuffer)
 
 
 # noinspection PyUnresolvedReferences
@@ -1625,6 +1625,7 @@ class Array(object):
         try:
             if partial_read_decode:
                 cdata.prepare_chunk()
+                # size of chunk
                 tmp = np.empty(self._chunks, dtype=self.dtype)
                 index_selection = PartialChunkIterator(chunk_selection, self.chunks)
                 for start, nitems, partial_out_selection in index_selection:
@@ -1715,10 +1716,9 @@ class Array(object):
             out_is_ndarray = False
 
         ckeys = [self._chunk_key(ch) for ch in lchunk_coords]
-
         if self._partial_decompress and self._compressor \
            and self._compressor.codec_id == 'blosc' and not fields \
-           and self.dtype != object and isinstance(self.chunk_store, FSStore):
+           and self.dtype != object and hasattr(self.chunk_store, "getitems"):
             partial_read_decode = True
             cdatas = {ckey: PartialReadBuffer(ckey, self.chunk_store)
                       for ckey in ckeys if ckey in self.chunk_store}
@@ -2416,62 +2416,3 @@ class Array(object):
         filters.insert(0, AsType(encode_dtype=self._dtype, decode_dtype=dtype))
 
         return self.view(filters=filters, dtype=dtype, read_only=True)
-
-
-from numcodecs.blosc import cbuffer_sizes, cbuffer_metainfo
-import mmap
-
-class PartialReadBuffer:
-
-    def __init__(self, store_key, chunk_store):
-        self.chunk_store = chunk_store
-        self.store_key = store_key
-        self.buff = None
-        self.nblocks = None
-        self.start_points = None
-        self.n_per_block = None
-
-    def prepare_chunk(self):
-        if self.buff:
-            return
-        header = self.chunk_store.read_block(self.store_key, 0, 16)
-        nbytes, cbytes, blocksize = cbuffer_sizes(header)
-        typesize, _shuffle, _memcpyd = cbuffer_metainfo(header)
-        
-        self.buff = mmap.mmap(-1, cbytes)
-        self.buff[0:16] = header
-        
-        self.nblocks = nbytes / blocksize
-        self.nblocks = int(self.nblocks) if self.nblocks == int(self.nblocks) else int(self.nblocks + 1)
-        if self.nblocks == 1:
-            self.buff = self.read_full()
-            return
-        start_points_buffer = self.chunk_store.read_block(self.store_key, 16, int(self.nblocks*4))
-        self.start_points = np.frombuffer(start_points_buffer,
-                                          count=self.nblocks,
-                                          dtype=np.int32)
-        self.buff[16: (16 + (self.nblocks*4))] = start_points_buffer
-        self.n_per_block = blocksize / typesize
-
-    def read_part(self, start, nitems):
-        if not self.buff:
-            self.prepare_chunk()
-        if self.nblocks == 1:
-            return
-        blocks_to_decompress = nitems / self.n_per_block
-        blocks_to_decompress = (blocks_to_decompress
-                                if blocks_to_decompress == int(blocks_to_decompress)
-                                else int(blocks_to_decompress+1))
-        start_block = int(start / self.n_per_block)
-        stop_block = start_block + blocks_to_decompress
-        for x in range(start_block, stop_block+1):
-            start_byte = self.start_points[x]
-            stop_byte = self.start_points[self.start_points > start_byte].min()
-            length = stop_byte - start_byte
-            data_buff = self.chunk_store.read_block(self.store_key,
-                                                    start_byte,
-                                                    length)
-            self.buff[start_byte:stop_byte] = data_buff
-
-    def read_full(self):
-        return self.chunk_store[self.store_key]
