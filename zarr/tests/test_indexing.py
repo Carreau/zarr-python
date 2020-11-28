@@ -1323,7 +1323,7 @@ def test_set_selections_with_fields():
     ((0,),
      np.arange(0, 100).reshape((10, 10)),
      [(0, 10, (slice(0, 1, 1),))]),
-    ((0,0,),
+    ((0, 0,),
      np.arange(0, 100).reshape((10, 10)),
      [(0, 1, (slice(0, 1, 1), slice(0, 1, 1)))]),
     ((0,),
@@ -1332,17 +1332,14 @@ def test_set_selections_with_fields():
     pytest.param((slice(5, 8, 1), slice(2, 4, 1), slice(0, 5, 1)),
                  np.arange(2, 100002).reshape((10, 1, 10000)),
                  None,
-                 marks=[pytest.mark.xfail(reason='slice 2 is out of range')]
-    ),
+                 marks=[pytest.mark.xfail(reason='slice 2 is out of range')]),
     pytest.param((slice(5, 8, 1), slice(2, 4, 1), slice(0, 5, 1)),
                  np.arange(2, 100_002).reshape((10, 10_000)),
                  None,
-                 marks=[pytest.mark.xfail(reason='slice 2 is out of range')]
-    ),
+                 marks=[pytest.mark.xfail(reason='slice 2 is out of range')]),
 ])
 def test_PartialChunkIterator(selection, arr, expected):
     print(selection)
     PCI = PartialChunkIterator(selection, arr.shape)
     results = list(PCI)
     assert(results == expected)
-

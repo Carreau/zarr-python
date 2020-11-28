@@ -536,7 +536,6 @@ class NoLock(object):
 nolock = NoLock()
 
 
-
 class PartialReadBuffer:
 
     def __init__(self, store_key, chunk_store):
@@ -565,7 +564,8 @@ class PartialReadBuffer:
         self.buff = mmap.mmap(-1, self.cbytes)
         self.buff[0:16] = header
         self.nblocks = nbytes / blocksize
-        self.nblocks = int(self.nblocks) if self.nblocks == int(self.nblocks) else int(self.nblocks + 1)
+        self.nblocks = (int(self.nblocks) if self.nblocks == int(self.nblocks)
+                        else int(self.nblocks + 1))
         if self.nblocks == 1:
             self.buff = self.read_full()
             return
@@ -604,4 +604,3 @@ class PartialReadBuffer:
 
     def read_full(self):
         return self.chunk_store[self.store_key]
-

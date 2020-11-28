@@ -19,7 +19,7 @@ from zarr.indexing import (BasicIndexer, CoordinateIndexer, MaskIndexer,
                            err_too_many_indices, is_contiguous_selection,
                            is_scalar, pop_fields)
 from zarr.meta import decode_array_metadata, encode_array_metadata
-from zarr.storage import array_meta_key, attrs_key, getsize, listdir, FSStore
+from zarr.storage import array_meta_key, attrs_key, getsize, listdir
 from zarr.util import (InfoReporter, check_array_shape, human_readable_size,
                        is_total_slice, nolock, normalize_chunks,
                        normalize_resize_args, normalize_shape,
@@ -53,7 +53,7 @@ class Array(object):
         operations. If False, user attributes are reloaded from the store prior
         to all attribute read operations.
     partial_decompress : bool, optional
-        If True and while the chunk_store is a FSStore and the compreesion used 
+        If True and while the chunk_store is a FSStore and the compreesion used
         is Blosc, when getting data from the array chunks will be partially
         read and decompressed when possible.
 
@@ -1722,7 +1722,6 @@ class Array(object):
             partial_read_decode = True
             cdatas = {ckey: PartialReadBuffer(ckey, self.chunk_store)
                       for ckey in ckeys if ckey in self.chunk_store}
-                
         else:
             partial_read_decode = False
             cdatas = self.chunk_store.getitems(ckeys, on_error="omit")
@@ -1839,13 +1838,13 @@ class Array(object):
     def _chunk_key(self, chunk_coords):
         return self._key_prefix + '.'.join(map(str, chunk_coords))
 
-    def _decode_chunk(self, cdata, start=None, nitems=None, expected_shape=None):    
-
+    def _decode_chunk(self, cdata, start=None, nitems=None, expected_shape=None):
         # decompress
         if self._compressor:
             # only decode requested items
-            if (all([x is not None for x in [start, nitems]])
-                and self._compressor.codec_id == 'blosc') and hasattr(self._compressor, 'decode_partial'):
+            if ((all([x is not None for x in [start, nitems]])
+                    and self._compressor.codec_id == 'blosc')
+                    and hasattr(self._compressor, 'decode_partial')):
                 chunk = self._compressor.decode_partial(cdata, start, nitems)
             else:
                 chunk = self._compressor.decode(cdata)

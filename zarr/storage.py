@@ -1135,7 +1135,6 @@ class FSStore(MutableMapping):
     def read_block(self, key, offset, length, delimiter=None):
         key = self.dir_path(key)
         return self.fs.read_block(key, offset, length, delimiter=None)
-        
 
 
 class TempStore(DirectoryStore):
