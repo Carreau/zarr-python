@@ -2371,7 +2371,6 @@ class TestArrayWithStoreCache(TestArray):
 
 @pytest.mark.skipif(have_fsspec is False, reason="needs fsspec")
 class TestArrayWithFSStore(TestArray):
-
     @staticmethod
     def create_array(read_only=False, **kwargs):
         path = mkdtemp()
@@ -2417,3 +2416,47 @@ class TestArrayWithFSStore(TestArray):
         if hasattr(z.store, 'close'):
             z.store.close()
 
+
+
+@pytest.mark.skipif(have_fsspec is False, reason="needs fsspec")
+class TestArrayWithFSStorePartialRead(TestArray):
+    @staticmethod
+    def create_array(read_only=False, **kwargs):
+        path = mkdtemp()
+        atexit.register(shutil.rmtree, path)
+        store = FSStore(path)
+        cache_metadata = kwargs.pop('cache_metadata', True)
+        cache_attrs = kwargs.pop('cache_attrs', True)
+        kwargs.setdefault('compressor', Blosc())
+        init_array(store, **kwargs)
+        return Array(store, read_only=read_only, cache_metadata=cache_metadata,
+                     cache_attrs=cache_attrs, partial_decompress=True)
+
+    def test_hexdigest(self):
+        # Check basic 1-D array
+        z = self.create_array(shape=(1050,), chunks=100, dtype='<i4')
+        assert 'f710da18d45d38d4aaf2afd7fb822fdd73d02957' == z.hexdigest()
+
+        # Check basic 1-D array with different type
+        z = self.create_array(shape=(1050,), chunks=100, dtype='<f4')
+        assert '1437428e69754b1e1a38bd7fc9e43669577620db' == z.hexdigest()
+
+        # Check basic 2-D array
+        z = self.create_array(shape=(20, 35,), chunks=10, dtype='<i4')
+        assert '6c530b6b9d73e108cc5ee7b6be3d552cc994bdbe' == z.hexdigest()
+
+        # Check basic 1-D array with some data
+        z = self.create_array(shape=(1050,), chunks=100, dtype='<i4')
+        z[200:400] = np.arange(200, 400, dtype='i4')
+        assert '4c0a76fb1222498e09dcd92f7f9221d6cea8b40e' == z.hexdigest()
+
+        # Check basic 1-D array with attributes
+        z = self.create_array(shape=(1050,), chunks=100, dtype='<i4')
+        z.attrs['foo'] = 'bar'
+        assert '05b0663ffe1785f38d3a459dec17e57a18f254af' == z.hexdigest()
+
+    def test_non_cont(self):
+        z = self.create_array(shape=(500,500, 500), chunks=(50, 50, 50), dtype='<i4')
+        z[:,:,:] = 0
+        # actually go through the partial read by accessing a single item
+        assert z[0,:,0].any()

@@ -587,10 +587,10 @@ class PartialReadBuffer:
                                 if blocks_to_decompress == int(blocks_to_decompress)
                                 else int(blocks_to_decompress+1))
         start_block = int(start / self.n_per_block)
-        stop_block = start_block + blocks_to_decompress
-        for block_i in range(start_block, stop_block):
-            if block_i not in self.read_blocks:
-                start_byte = self.start_points[block_i]
+        wanted_decompressed = 0
+        while wanted_decompressed < nitems:
+            if start_block not in self.read_blocks:
+                start_byte = self.start_points[start_block]
                 if start_byte == self.start_points_max:
                     stop_byte = self.cbytes
                 else:
@@ -600,7 +600,12 @@ class PartialReadBuffer:
                                                start_byte,
                                                length)
                 self.buff[start_byte:stop_byte] = data_buff
-                self.read_blocks.add(block_i)
+                self.read_blocks.add(start_block)
+            if wanted_decompressed == 0:
+                wanted_decompressed += ((start_block + 1) * self.n_per_block) - start
+            else:
+                wanted_decompressed += self.n_per_block
+            start_block += 1
 
     def read_full(self):
         return self.chunk_store[self.store_key]

@@ -876,7 +876,7 @@ class PartialChunkIterator(object):
         self.selection_shape = np.empty(self.arr_shape)[self.selection].shape
         if any([selection_dim < 0 or selection_dim > arr_dim for selection_dim, arr_dim
                 in zip(self.selection_shape, self.arr_shape)]):
-            raise IndexError('a selection index is out of range for the dimension')
+            raise IndexError('a selection index is out of range for the dimension') # pragma: no cover
 
         for i, dim_size in enumerate(self.arr_shape[::-1]):
             index = len(self.arr_shape) - (i+1)
