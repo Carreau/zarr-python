@@ -916,9 +916,9 @@ class PartialChunkIterator:
 
         chunk_loc_slices = []
         last_dim_slice = None if selection[-1].step > 1 else selection.pop()
-        for i, sl in enumerate(selection):
+        for arr_shape_i, sl in zip(selection, arr_shape)):
             dim_chunk_loc_slices = []
-            for i, x in enumerate(slice_to_range(sl, arr_shape[i])):
+            for x in slice_to_range(sl, self.arr_shape_i):
                 dim_chunk_loc_slices.append(slice(x, x + 1, 1))
             chunk_loc_slices.append(dim_chunk_loc_slices)
         if last_dim_slice:
@@ -934,4 +934,6 @@ class PartialChunkIterator:
             start = 0
             for i, sl in enumerate(chunk_selection):
                 start += sl.start * np.prod(self.arr_shape[i + 1 :])
-            yield int(start), int(nitems), chunk_selection
+            assert isinstance(start, int)
+            assert isinstance(nitems, int)
+            yield start, nitems, chunk_selection
