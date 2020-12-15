@@ -876,7 +876,7 @@ class PartialChunkIterator(object):
             )
 
         # any selection can not be out of the range of the chunk
-        self.selection_shape = np.empty(self.arr_shape)[self.selection].shape
+        self.selection_shape = np.empty(self.arr_shape)[tuple(self.selection)].shape
         if any(
             [
                 selection_dim < 0 or selection_dim > arr_dim
