@@ -45,7 +45,7 @@ from zarr.util import (
 
 
 # noinspection PyUnresolvedReferences
-class Array(object):
+class Array:
     """Instantiate an array from an initialized store.
 
     Parameters
@@ -1763,6 +1763,7 @@ class Array(object):
             self._partial_decompress
             and self._compressor
             and self._compressor.codec_id == "blosc"
+            and hasattr(self._compressor, "decode_partial")
             and not fields
             and self.dtype != object
             and hasattr(self.chunk_store, "getitems")
