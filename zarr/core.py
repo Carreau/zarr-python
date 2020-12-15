@@ -1145,7 +1145,7 @@ class Array(object):
 
         See Also
         --------
-        basic_selection, set_basic_selection, get_mask_selection, set_mask_selection,
+        get_basic_selection, set_basic_selection, get_mask_selection, set_mask_selection,
         get_coordinate_selection, set_coordinate_selection, get_orthogonal_selection,
         set_orthogonal_selection, vindex, oindex, __getitem__
 
@@ -1646,6 +1646,7 @@ class Array(object):
                 # optimization: we want the whole chunk, and the destination is
                 # contiguous, so we can decompress directly from the chunk
                 # into the destination array
+
                 if self._compressor:
                     if isinstance(cdata, PartialReadBuffer):
                         cdata = cdata.read_full()
@@ -1800,8 +1801,7 @@ class Array(object):
         ckeys = [self._chunk_key(co) for co in lchunk_coords]
         cdatas = [self._process_for_setitem(key, sel, val, fields=fields)
                   for key, sel, val in zip(ckeys, lchunk_selection, values)]
-        values = {k: v for k, v in zip(ckeys, cdatas)}
-        self.chunk_store.setitems(values)
+        self.chunk_store.setitems({k: v for k, v in zip(ckeys, cdatas)})
 
     def _chunk_setitem(self, chunk_coords, chunk_selection, value, fields=None):
         """Replace part or whole of a chunk.

@@ -285,7 +285,6 @@ class TestArray(unittest.TestCase):
         ix = [99, 100, 101]
         bix = np.zeros_like(a, dtype=bool)
         bix[ix] = True
-        print(a[ix])
         assert_array_equal(a[ix], z.get_orthogonal_selection(ix))
         assert_array_equal(a[ix], z.oindex[ix])
         assert_array_equal(a[ix], z.get_coordinate_selection(ix))
@@ -2382,6 +2381,7 @@ class TestArrayWithStoreCache(TestArray):
 
 @pytest.mark.skipif(have_fsspec is False, reason="needs fsspec")
 class TestArrayWithFSStore(TestArray):
+
     @staticmethod
     def create_array(read_only=False, **kwargs):
         path = mkdtemp()
