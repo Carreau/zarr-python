@@ -847,7 +847,7 @@ def make_slice_selection(selection):
     return ls
 
 
-class PartialChunkIterator(object):
+class PartialChunkIterator:
     """Iterator tp retrieve the specific coordinates of requested data
     from within a compressed chunk.
 
@@ -864,6 +864,10 @@ class PartialChunkIterator(object):
     """
 
     def __init__(self, selection, arr_shape):
+        ## TODO: self.selection seem to be unused outside of this
+        # and seem to be mutated; which might not be expected
+        # self.selection seem to be expected to be part of the external API of 
+        # this iterator; so not sure we can make it a local variable.
         self.selection = make_slice_selection(selection)
         self.arr_shape = arr_shape
 
@@ -876,11 +880,11 @@ class PartialChunkIterator(object):
             )
 
         # any selection can not be out of the range of the chunk
-        self.selection_shape = np.empty(self.arr_shape)[tuple(self.selection)].shape
+        selection_shape = np.empty(self.arr_shape)[tuple(self.selection)].shape
         if any(
             [
                 selection_dim < 0 or selection_dim > arr_dim
-                for selection_dim, arr_dim in zip(self.selection_shape, self.arr_shape)
+                for selection_dim, arr_dim in zip(selection_shape, self.arr_shape)
             ]
         ):
             raise IndexError(
@@ -890,7 +894,7 @@ class PartialChunkIterator(object):
         for i, dim_size in enumerate(self.arr_shape[::-1]):
             index = len(self.arr_shape) - (i + 1)
             if index <= len(self.selection) - 1:
-                slice_size = self.selection_shape[index]
+                slice_size = selection_shape[index]
                 if slice_size == dim_size and index > 0:
                     self.selection.pop()
                 else:
