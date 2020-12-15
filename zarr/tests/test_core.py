@@ -2469,6 +2469,6 @@ class TestArrayWithFSStorePartialRead(TestArray):
 
     def test_non_cont(self):
         z = self.create_array(shape=(500, 500, 500), chunks=(50, 50, 50), dtype="<i4")
-        z[:, :, :] = 0
+        z[:, :, :] = 1
         # actually go through the partial read by accessing a single item
         assert z[0, :, 0].any()
