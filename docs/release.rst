@@ -1,6 +1,21 @@
 Release notes
 =============
 
+
+2.6.0
+-----
+
+This release od Zarr Python is is the first release of Zarr to not supporting Python 3.5.
+
+* End Python 3.5 support.
+  By :user:`Chris Barnes <clbarnes>`; :issue:`602`.
+
+* Fix ``open_group/open_array`` to allow opening of read-only store with
+  ``mode='r'`` :issue:`269`
+
+* Add `Array` tests for FSStore.
+  By :user:`Andrew Fulton <andrewfulton9>`; :issue: `644`.
+
 * fix a bug in which ``attrs`` would not be copied on the root when using ``copy_all``; :issue:`613`
 
 * Fix ``FileNotFoundError``  with dask/s3fs :issue:`649`
@@ -25,20 +40,6 @@ merged PR tagged with the 2.6 milestone.
   should be used only when the subset of the data is small compared to the full
   chunks and is stored contiguously (last dimensions for C layout, firsts for
   F). Set ``partial_decompress=True`` when creating an ``Array``
-
-2.6.0
------
-
-This release od Zarr Python is is the first release of Zarr to not supporting Python 3.5.
-
-* End Python 3.5 support.
-  By :user:`Chris Barnes <clbarnes>`; :issue:`602`.
-
-* Fix ``open_group/open_array`` to allow opening of read-only store with
-  ``mode='r'`` :issue:`269`
-
-* Add `Array` tests for FSStore.
-  By :user:`Andrew Fulton <andrewfulton9>`; :issue: `644`.
 
 
 2.5.0
