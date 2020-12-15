@@ -882,23 +882,19 @@ class PartialChunkIterator:
     """
 
     def __init__(self, selection, arr_shape):
-        ## TODO: self.selection seem to be unused outside of this
-        # and seem to be mutated; which might not be expected
-        # self.selection seem to be expected to be part of the external API of 
-        # this iterator; so not sure we can make it a local variable.
-        self.selection = make_slice_selection(selection)
+        selection = make_slice_selection(selection)
         self.arr_shape = arr_shape
 
         # number of selection dimensions can't be greater than the number of chunk dimensions
-        if len(self.selection) > len(self.arr_shape):
+        if len(selection) > len(self.arr_shape):
             raise ValueError(
                 "Selection has more dimensions then the array:\n"
-                "selection dimensions = {len(self.selection)\n"
+                "selection dimensions = {len(selection)\n"
                 "array dimensions = {len(self.arr_shape)}"
             )
 
         # any selection can not be out of the range of the chunk
-        selection_shape = np.empty(self.arr_shape)[tuple(self.selection)].shape
+        selection_shape = np.empty(self.arr_shape)[tuple(selection)].shape
         if any(
             [
                 selection_dim < 0 or selection_dim > arr_dim
@@ -911,16 +907,16 @@ class PartialChunkIterator:
 
         for i, dim_size in enumerate(self.arr_shape[::-1]):
             index = len(self.arr_shape) - (i + 1)
-            if index <= len(self.selection) - 1:
+            if index <= len(selection) - 1:
                 slice_size = selection_shape[index]
                 if slice_size == dim_size and index > 0:
-                    self.selection.pop()
+                    selection.pop()
                 else:
                     break
 
         chunk_loc_slices = []
-        last_dim_slice = None if self.selection[-1].step > 1 else self.selection.pop()
-        for i, sl in enumerate(self.selection):
+        last_dim_slice = None if selection[-1].step > 1 else selection.pop()
+        for i, sl in enumerate(selection):
             dim_chunk_loc_slices = []
             for i, x in enumerate(slice_to_range(sl, arr_shape[i])):
                 dim_chunk_loc_slices.append(slice(x, x + 1, 1))
