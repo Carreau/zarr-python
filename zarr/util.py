@@ -537,11 +537,10 @@ nolock = NoLock()
 
 
 class PartialReadBuffer:
-
     def __init__(self, store_key, chunk_store):
         self.chunk_store = chunk_store
         # is it fsstore or an actual fsspec map object
-        if getattr(self.chunk_store, 'map', None):
+        if getattr(self.chunk_store, "map", None):
             self.map = self.chunk_store.map
         else:
             self.map = self.chunk_store
@@ -564,17 +563,22 @@ class PartialReadBuffer:
         self.buff = mmap.mmap(-1, self.cbytes)
         self.buff[0:16] = header
         self.nblocks = nbytes / blocksize
-        self.nblocks = (int(self.nblocks) if self.nblocks == int(self.nblocks)
-                        else int(self.nblocks + 1))
+        self.nblocks = (
+            int(self.nblocks)
+            if self.nblocks == int(self.nblocks)
+            else int(self.nblocks + 1)
+        )
         if self.nblocks == 1:
             self.buff = self.read_full()
             return
-        start_points_buffer = self.fs.read_block(self.key_path, 16, int(self.nblocks*4))
-        self.start_points = np.frombuffer(start_points_buffer,
-                                          count=self.nblocks,
-                                          dtype=np.int32)
+        start_points_buffer = self.fs.read_block(
+            self.key_path, 16, int(self.nblocks * 4)
+        )
+        self.start_points = np.frombuffer(
+            start_points_buffer, count=self.nblocks, dtype=np.int32
+        )
         self.start_points_max = self.start_points.max()
-        self.buff[16: (16 + (self.nblocks*4))] = start_points_buffer
+        self.buff[16 : (16 + (self.nblocks * 4))] = start_points_buffer
         self.n_per_block = blocksize / typesize
 
     def read_part(self, start, nitems):
@@ -583,9 +587,11 @@ class PartialReadBuffer:
         if self.nblocks == 1:
             return
         blocks_to_decompress = nitems / self.n_per_block
-        blocks_to_decompress = (blocks_to_decompress
-                                if blocks_to_decompress == int(blocks_to_decompress)
-                                else int(blocks_to_decompress+1))
+        blocks_to_decompress = (
+            blocks_to_decompress
+            if blocks_to_decompress == int(blocks_to_decompress)
+            else int(blocks_to_decompress + 1)
+        )
         start_block = int(start / self.n_per_block)
         wanted_decompressed = 0
         while wanted_decompressed < nitems:
@@ -596,9 +602,7 @@ class PartialReadBuffer:
                 else:
                     stop_byte = self.start_points[self.start_points > start_byte].min()
                 length = stop_byte - start_byte
-                data_buff = self.fs.read_block(self.key_path,
-                                               start_byte,
-                                               length)
+                data_buff = self.fs.read_block(self.key_path, start_byte, length)
                 self.buff[start_byte:stop_byte] = data_buff
                 self.read_blocks.add(start_block)
             if wanted_decompressed == 0:

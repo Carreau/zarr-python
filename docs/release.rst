@@ -1,7 +1,6 @@
 Release notes
 =============
 
-
 2.6.0
 -----
 
@@ -40,7 +39,6 @@ merged PR tagged with the 2.6 milestone.
   should be used only when the subset of the data is small compared to the full
   chunks and is stored contiguously (last dimensions for C layout, firsts for
   F). Set ``partial_decompress=True`` when creating an ``Array``
-
 
 2.5.0
 -----

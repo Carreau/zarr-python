@@ -7,9 +7,10 @@ import numpy as np
 
 from zarr.errors import (
     NegativeStepError,
+    err_too_many_indices,
     VindexInvalidSelectionError,
     BoundsCheckError,
-    ArrayIndexError
+    ArrayIndexError,
 )
 
 
@@ -828,7 +829,7 @@ def pop_fields(selection):
 
 
 def int_to_slice(dim_selection):
-    return slice(dim_selection, dim_selection+1, 1)
+    return slice(dim_selection, dim_selection + 1, 1)
 
 
 def make_slice_selection(selection):
@@ -868,19 +869,27 @@ class PartialChunkIterator(object):
 
         # number of selection dimensions can't be greater than the number of chunk dimensions
         if len(self.selection) > len(self.arr_shape):
-            raise ValueError('Selection has more dimensions then the array:\n'
-                             'selection dimensions = {len(self.selection)\n'
-                             'array dimensions = {len(self.arr_shape)}')
+            raise ValueError(
+                "Selection has more dimensions then the array:\n"
+                "selection dimensions = {len(self.selection)\n"
+                "array dimensions = {len(self.arr_shape)}"
+            )
 
         # any selection can not be out of the range of the chunk
         self.selection_shape = np.empty(self.arr_shape)[self.selection].shape
-        if any([selection_dim < 0 or selection_dim > arr_dim for selection_dim, arr_dim
-                in zip(self.selection_shape, self.arr_shape)]):
-            raise IndexError('a selection index is out of range for the dimension') # pragma: no cover
+        if any(
+            [
+                selection_dim < 0 or selection_dim > arr_dim
+                for selection_dim, arr_dim in zip(self.selection_shape, self.arr_shape)
+            ]
+        ):
+            raise IndexError(
+                "a selection index is out of range for the dimension"
+            )  # pragma: no cover
 
         for i, dim_size in enumerate(self.arr_shape[::-1]):
-            index = len(self.arr_shape) - (i+1)
-            if index <= len(self.selection)-1:
+            index = len(self.arr_shape) - (i + 1)
+            if index <= len(self.selection) - 1:
                 slice_size = self.selection_shape[index]
                 if slice_size == dim_size and index > 0:
                     self.selection.pop()
@@ -892,7 +901,7 @@ class PartialChunkIterator(object):
         for i, sl in enumerate(self.selection):
             dim_chunk_loc_slices = []
             for i, x in enumerate(slice_to_range(sl, arr_shape[i])):
-                dim_chunk_loc_slices.append(slice(x, x+1, 1))
+                dim_chunk_loc_slices.append(slice(x, x + 1, 1))
             chunk_loc_slices.append(dim_chunk_loc_slices)
         if last_dim_slice:
             chunk_loc_slices.append([last_dim_slice])
@@ -900,9 +909,11 @@ class PartialChunkIterator(object):
 
     def __iter__(self):
         chunk1 = self.chunk_loc_slices[0]
-        nitems = (chunk1[-1].stop - chunk1[-1].start) * np.prod(self.arr_shape[len(chunk1):])
+        nitems = (chunk1[-1].stop - chunk1[-1].start) * np.prod(
+            self.arr_shape[len(chunk1) :]
+        )
         for chunk_selection in self.chunk_loc_slices:
             start = 0
             for i, sl in enumerate(chunk_selection):
-                start += sl.start * np.prod(self.arr_shape[i+1:])
+                start += sl.start * np.prod(self.arr_shape[i + 1 :])
             yield int(start), int(nitems), chunk_selection

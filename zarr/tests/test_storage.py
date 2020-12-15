@@ -967,8 +967,9 @@ class TestFSStore(StoreTests, unittest.TestCase):
                             storage_options=self.s3so)
         expected = np.empty((8, 8, 8), dtype='int64')
         expected[:] = -1
-        a = g.create_dataset("data", shape=(8, 8, 8),
-                             fill_value=-1, chunks=(1, 1, 1))
+        a = g.create_dataset(
+            "data", shape=(8, 8, 8), fill_value=-1, chunks=(1, 1, 1), overwrite=True
+        )
         expected[0] = 0
         expected[3] = 3
         expected[6, 6, 6] = 6
@@ -983,7 +984,7 @@ class TestFSStore(StoreTests, unittest.TestCase):
                              storage_options=self.s3so)
 
         assert (g2.data[:] == expected).all()
-        a.chunk_store.fs.invalidate_cache('test/out.zarr/data')
+        a.chunk_store.fs.invalidate_cache("test/out.zarr/data")
         a[:] = 5
         assert (a[:] == 5).all()
 
@@ -1035,9 +1036,10 @@ def s3(request):
             pass
         timeout -= 0.1  # pragma: no cover
         time.sleep(0.1)  # pragma: no cover
-    s3so = dict(client_kwargs={'endpoint_url': endpoint_uri})
-    s3_fs = s3fs.S3FileSystem(anon=False, **s3so)
-    s3_fs.mkdir("test")
+    s3so = dict(client_kwargs={'endpoint_url': endpoint_uri},
+                use_listings_cache=False)
+    s3 = s3fs.S3FileSystem(anon=False, **s3so)
+    s3.mkdir("test")
     request.cls.s3so = s3so
     yield
     proc.terminate()

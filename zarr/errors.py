@@ -11,10 +11,12 @@ class CopyError(RuntimeError):
 class _BaseZarrError(ValueError):
     _msg = ""
 
-class ArrayIndexError(IndexError):
-
     def __init__(self, *args):
         super().__init__(self._msg.format(*args))
+
+
+class ArrayIndexError(IndexError):
+    pass
 
 
 class _BaseZarrIndexError(IndexError):
