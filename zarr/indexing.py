@@ -848,19 +848,37 @@ def make_slice_selection(selection):
 
 
 class PartialChunkIterator:
-    """Iterator tp retrieve the specific coordinates of requested data
+    """Iterator to retrieve the specific coordinates of requested data
     from within a compressed chunk.
 
     Parameters
-    -----------
+    ----------
     selection : tuple
         tuple of slice objects to take from the chunk
     arr_shape : shape of chunk to select data from
 
     Attributes
-    -----------
+    ----------
     arr_shape
     selection
+
+    Returns
+    -------
+    Tuple with 3 elements:
+
+    start: int
+        ? bytes offset in the chunk to read from 
+    nitems: int
+        ? number of (bytes? elements?) to read in the chunk from start
+    partial_out_selection: list of slices
+        ? indices of the final selection to assign to after the partial read.
+
+    Notes
+    -----
+
+    My understanding of the partial read is that it create an empty array of the final shape of the required selection; 
+    and then do partial reading (with hacks in Blosc to do only partial decompress). 
+    And assign thos partial reads into the final partial buffer.
     """
 
     def __init__(self, selection, arr_shape):
