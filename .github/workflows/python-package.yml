@@ -5,7 +5,7 @@ name: Python package
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, ndbm ]
   pull_request:
     branches: [ master ]
 
@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.6.9' , 3.7, 3.8]
-        numpy_version: ['==1.16.4', '']
+        python-version: [3.8]
+        numpy_version: ['']
     services:
       redis:
         image: redis
@@ -70,7 +70,7 @@ jobs:
         conda activate zarr-env
         mkdir ~/blob_emulator
         azurite -l ~/blob_emulator --debug debug.log 2>&1 > stdouterr.log &
-        pytest --cov=zarr --cov-config=.coveragerc --doctest-plus --cov-report xml --cov=./
+        pytest --cov=./ zarr/tests/test_storage.py::TestDBMStoreNDBM
     - uses: codecov/codecov-action@v1
       with:
         #token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos

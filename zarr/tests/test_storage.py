@@ -1305,7 +1305,7 @@ class TestDBMStoreGnu(TestDBMStore):
 class TestDBMStoreNDBM(TestDBMStore):
 
     def create_store(self):
-        ndbm = pytest.importorskip("dbm.ndbm")
+        import dbm.ndbm as ndbm
         path = tempfile.mktemp(suffix='.ndbm')
         atexit.register(atexit_rmglob, path + '*')
         store = DBMStore(path, flag='n', open=ndbm.open)
